@@ -9,6 +9,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+void processFile(char*);
+
 int main(int argc, char *argv[]) {
 
   // Input with initial values
@@ -87,7 +89,7 @@ int main(int argc, char *argv[]) {
 
           // Close the directory
           closedir(currDir);
-          printf("Now processing the chosen file named %s\n", entryName);
+          processFile(entryName);
           
         } else if (input[1] == 2)
         {
@@ -133,7 +135,7 @@ int main(int argc, char *argv[]) {
 
           // Close the directory
           closedir(currDir);
-          printf("Now processing the chosen file named %s\n", entryName);
+          processFile(entryName);
           
         } else if (input[1] == 3)
         {
@@ -151,11 +153,13 @@ int main(int argc, char *argv[]) {
 
           file_descriptor = open(entryName, O_RDWR , 0600);
           if (file_descriptor == -1){
-            printf("open() failed on \"%s\"\n", entryName);
-            perror("Error");
+            printf("The file %s was not found. Try again\n", entryName);
+            input[1] = 0;
+          } else {
+
+            processFile(entryName);
+
           }
-	
-	        printf("file_descriptor = %d\n", file_descriptor);
 
           close(file_descriptor);
 
@@ -179,6 +183,187 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
+struct movie *processMovieFile(char *filePath);
+struct movie *createMovie(char *currLine);
 
+struct movie
+{
+    char *title;          // Movie Title
+    int   year;           // Year of release
+    char *languages[5];// Languages
+    double ranking;       // Rating, either int or double
+    struct movie *next;   // Linked List Itterator
+};
 
+void processFile(char* fileName) {
+  printf("Now processing the chosen file named %s\n", fileName);
 
+  char dirName[256];
+  sprintf(dirName, "bradychr.movies.%ld", (random()%100000));
+
+  mkdir(dirName, 0750);
+
+  int file_descriptor;
+  char filePath[256];
+
+  // Extract movies from provided file
+  struct movie *MoviesList = processMovieFile(fileName);
+
+  // Start by finding lowest year
+  struct movie *searchHead = MoviesList;
+  struct movie *searchHead2 = MoviesList;
+
+  // Lookup table for year filtering. Stupid. Dirty. 
+  // But more importantly...
+  // It does the job :(
+    
+  int foundYears[3000];
+  for(int i = 0; i < 3000; i++) {
+    foundYears[i] = 0;
+  }
+
+  // O(n^2) yuck
+
+  // Begin Search Loop
+  while(searchHead != NULL) {
+    // no entry found yet
+    if (foundYears[searchHead->year] == 0) {
+      foundYears[searchHead->year] = 1;
+      
+      searchHead2 = MoviesList;
+
+      while (searchHead2 != NULL)
+      {
+        if(searchHead->year == searchHead2->year) {
+
+          // FOUND MATCH
+
+          sprintf(filePath, "./%s/%d.txt", dirName, searchHead2->year);
+
+          file_descriptor = open(filePath, O_RDWR | O_CREAT | O_APPEND, 0640);
+
+          char contents[256];
+
+          sprintf(contents, "%s\n", searchHead2->title);
+
+          write(file_descriptor, contents, strlen(contents));
+
+          close(file_descriptor);
+
+          printf("%d %s\n", searchHead2->year, searchHead2->title);
+        }
+
+        searchHead2 = searchHead2->next;
+      }
+
+    }
+    
+    searchHead = searchHead->next;
+  }
+
+};
+
+struct movie *processMovieFile(char *filePath)
+{
+    // Open the specified file for reading only
+    FILE *movieFile = fopen(filePath, "r");
+
+    char *currLine = NULL;
+    size_t len = 0;
+    ssize_t nread;
+    char *token;
+
+    // The head of the linked list
+    struct movie *head = NULL;
+    // The tail of the linked list
+    struct movie *tail = NULL;
+
+    int legendGuard = 0;
+
+    // Read the file line by line
+    while ((nread = getline(&currLine, &len, movieFile)) != -1)
+    {
+        legendGuard++;
+        if (legendGuard == 1)
+        {
+          continue;
+        }
+        
+
+        // Get a new student node corresponding to the current line
+        struct movie *newNode = createMovie(currLine);
+
+        // Is this the first node in the linked list?
+        if (head == NULL)
+        {
+            // This is the first node in the linked link
+            // Set the head and the tail to this node
+            head = newNode;
+            tail = newNode;
+        }
+        else
+        {
+            // This is not the first node.
+            // Add this node to the list and advance the tail
+            tail->next = newNode;
+            tail = newNode;
+        }
+    }
+    free(currLine);
+    fclose(movieFile);
+    return head;
+}
+
+/* Parse the current line which is space delimited and create a
+*  student struct with the data in this line
+*/
+struct movie *createMovie(char *currLine)
+{
+    struct movie *currMovie = malloc(sizeof(struct movie));
+
+    // For use with strtok_r
+    char *saveptr;
+    char *saveptr2;
+
+    // The first token is the title
+    char *token = strtok_r(currLine, ",", &saveptr);
+    currMovie->title = calloc(strlen(token) + 1, sizeof(char));
+    strcpy(currMovie->title, token);
+
+    // The next token is the year
+    token = strtok_r(NULL, ",", &saveptr);
+    currMovie->year = atoi(token);
+
+    // === The next token(s) is the languages
+
+    // Outer loop, extract sub array
+    token = strtok_r(NULL, ",", &saveptr);
+
+    // remove brackets (this one sucked)
+    char *token2 = strtok_r(token, "[", &saveptr2);
+    token2 = strtok_r(token2, "]", &saveptr2);
+    
+    // Reset delemeter to semicolon
+    token2 = strtok_r(token2, ";", &saveptr2);
+
+    int i = 0; 
+    while(token2 != NULL) {
+      
+      currMovie->languages[i] = calloc(strlen(token2) + 1, sizeof(char));
+      strcpy(currMovie->languages[i], token2);
+
+      i++;
+      token2 = strtok_r(NULL, ";", &saveptr2);
+    }
+
+    
+
+    // The last token is the rating value
+    token = strtok_r(NULL, "\n", &saveptr);
+    currMovie->ranking = strtod(token, NULL);
+
+    // Set the next node to NULL in the newly created student entry
+    currMovie->next = NULL;
+
+    return currMovie;
+}
