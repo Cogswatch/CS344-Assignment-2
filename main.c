@@ -1,5 +1,12 @@
+// More includes than I could ever need
+// Courtesy of Exploration: Directories
+#include <dirent.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 int main(int argc, char *argv[]) {
 
@@ -38,12 +45,75 @@ int main(int argc, char *argv[]) {
         {
           // The program finds the largest file with the extension csv in the current directory whose name starts with the prefix movies_ and automatically process it.
           // In case of tie, pick any of the files with the extension csv starting with movies_ that have the largest size.
+
+          // Courtesy of Exploration: Directories
+          DIR* currDir = opendir(".");  // Open the current directory
+          struct dirent *aDir;          // Directory Struct
+          time_t lastModifTime;         // Time Since Last Modification
+          off_t largestSize = 0;        // Largest file read
+          struct stat dirStat;          // Meta Data Struct
+          int i = 0;                    // Record First Safety
+          char entryName[256];          // Name Holder
+
+          // Go through all the entries
+          while((aDir = readdir(currDir)) != NULL){
+
+            // Check for prefix = "movies"
+            if(strncmp("movies", aDir->d_name, strlen("movies")) == 0){
+              
+              // Get meta-data for the current entry
+              stat(aDir->d_name, &dirStat);  
+            
+              // Compare File Sizes
+              if(i == 0 || dirStat.st_size > largestSize){
+                  largestSize = dirStat.st_size;
+                  memset(entryName, '\0', sizeof(entryName));
+                  strcpy(entryName, aDir->d_name);
+                }
+              i++;
+            }
+          }
+
+          // Close the directory
+          closedir(currDir);
+          printf("Now processing the chosen file named %s\n", entryName);
           
         } else if (input[1] == 2)
         {
           // The program finds the smallest file with the extension csv in the current directory whose name starts with the prefix movies_ and automatically process it.
           // In case of tie, pick any of the files with the extension csv starting with movies_ that have the smallest size.
+          // Courtesy of Exploration: Directories
+          DIR* currDir = opendir(".");  // Open the current directory
+          struct dirent *aDir;          // Directory Struct
+          time_t lastModifTime;         // Time Since Last Modification
+          off_t largestSize = 0;        // Largest file read
+          struct stat dirStat;          // Meta Data Struct
+          int i = 0;                    // Record First Safety
+          char entryName[256];          // Name Holder
 
+          // Go through all the entries
+          while((aDir = readdir(currDir)) != NULL){
+
+            // Check for prefix = "movies"
+            if(strncmp("movies", aDir->d_name, strlen("movies")) == 0){
+              
+              // Get meta-data for the current entry
+              stat(aDir->d_name, &dirStat);  
+            
+              // Compare File Sizes
+              if(i == 0 || dirStat.st_size < largestSize){
+                  largestSize = dirStat.st_size;
+                  memset(entryName, '\0', sizeof(entryName));
+                  strcpy(entryName, aDir->d_name);
+                }
+              i++;
+            }
+          }
+
+          // Close the directory
+          closedir(currDir);
+          printf("Now processing the chosen file named %s\n", entryName);
+          
         } else if (input[1] == 3)
         {
           // The program asks the user to enter the name of a file.
