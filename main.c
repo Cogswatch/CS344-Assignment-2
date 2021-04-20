@@ -1,5 +1,6 @@
 // More includes than I could ever need
 // Courtesy of Exploration: Directories
+#include <fcntl.h>
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +23,7 @@ int main(int argc, char *argv[]) {
     printf("\n");
     printf("Enter a choice 1 or 2: ");
   
-    scanf("%d", &input[0]);
+    scanf(" %d", &input[0]);
 
     if(input[0] == 1) {
       //Reset Outer Option
@@ -39,7 +40,7 @@ int main(int argc, char *argv[]) {
         printf("\n");
         printf("Enter a choice from 1 to 3: ");
 
-        scanf("%d", &input[1]);
+        scanf(" %d", &input[1]);
 
         if (input[1] == 1)
         {
@@ -63,13 +64,23 @@ int main(int argc, char *argv[]) {
               
               // Get meta-data for the current entry
               stat(aDir->d_name, &dirStat);  
-            
-              // Compare File Sizes
-              if(i == 0 || dirStat.st_size > largestSize){
-                  largestSize = dirStat.st_size;
-                  memset(entryName, '\0', sizeof(entryName));
-                  strcpy(entryName, aDir->d_name);
+
+              // CVS verification idea modified from https://stackoverflow.com/questions/4849986/how-can-i-check-the-file-extensions-in-c
+
+              char *end = strrchr(aDir->d_name,'.');// = aDir->d_name + strlen(aDir->d_name);
+
+              if(i == 0 || end != NULL ) {
+                //ends with csv
+                if(i == 0 || strcmp(end,".csv") == 0) {
+                  // Compare File Sizes
+                  if(i == 0 || dirStat.st_size > largestSize){
+                      largestSize = dirStat.st_size;
+                      memset(entryName, '\0', sizeof(entryName));
+                      strcpy(entryName, aDir->d_name);
+                    }
                 }
+              }
+
               i++;
             }
           }
@@ -99,13 +110,23 @@ int main(int argc, char *argv[]) {
               
               // Get meta-data for the current entry
               stat(aDir->d_name, &dirStat);  
-            
-              // Compare File Sizes
-              if(i == 0 || dirStat.st_size < largestSize){
-                  largestSize = dirStat.st_size;
-                  memset(entryName, '\0', sizeof(entryName));
-                  strcpy(entryName, aDir->d_name);
+
+              // CVS verification idea modified from https://stackoverflow.com/questions/4849986/how-can-i-check-the-file-extensions-in-c
+
+              char *end = strrchr(aDir->d_name,'.');// = aDir->d_name + strlen(aDir->d_name);
+
+              if(i == 0 || end != NULL ) {
+                //ends with csv
+                if(i == 0 || strcmp(end,".csv") == 0) {
+                  // Compare File Sizes
+                  if(i == 0 || dirStat.st_size < largestSize){
+                      largestSize = dirStat.st_size;
+                      memset(entryName, '\0', sizeof(entryName));
+                      strcpy(entryName, aDir->d_name);
+                    }
                 }
+              }
+
               i++;
             }
           }
@@ -119,6 +140,24 @@ int main(int argc, char *argv[]) {
           // The program asks the user to enter the name of a file.
           // The program checks if this file exists in the current directory. If the file is not found, the program should write an error message and again give the user the 3 choices about picking a file, i.e., don't go back to the main menu, but stay at the menu for picking a file.
           // For this option, there is no requirement that the file name must start with a particular prefix or that it must have a particular extension.
+
+          char entryName[256];          // Name Holder
+          int file_descriptor;          // File existance status
+
+          printf("Enter the complete file name: ");
+          scanf(" %s", entryName);
+
+          // Largely from Exploration: Files
+
+          file_descriptor = open(entryName, O_RDWR , 0600);
+          if (file_descriptor == -1){
+            printf("open() failed on \"%s\"\n", entryName);
+            perror("Error");
+          }
+	
+	        printf("file_descriptor = %d\n", file_descriptor);
+
+          close(file_descriptor);
 
         } else {
           printf("Invalid Input\n");
