@@ -201,6 +201,8 @@ void processFile(char* fileName) {
   char dirName[256];
   sprintf(dirName, "bradychr.movies.%ld", (random()%100000));
 
+  printf("Created directory with name %s\n", dirName);
+
   mkdir(dirName, 0750);
 
   int file_descriptor;
@@ -249,8 +251,6 @@ void processFile(char* fileName) {
           write(file_descriptor, contents, strlen(contents));
 
           close(file_descriptor);
-
-          printf("%d %s\n", searchHead2->year, searchHead2->title);
         }
 
         searchHead2 = searchHead2->next;
